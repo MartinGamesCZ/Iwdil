@@ -1,0 +1,49 @@
+services:
+  frontend:
+    tty: true
+    restart: on-failure
+    build:
+      context: ./repos/frontend
+      dockerfile: ./dev.dockerfile
+    volumes:
+      - ./repos/frontend:/app
+      - /app/node_modules
+      - /app/.next
+    networks:
+      - default
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env.local
+
+  backend:
+    tty: true
+    restart: on-failure
+    build:
+      context: ./repos/backend
+      dockerfile: ./dev.dockerfile
+    volumes:
+      - ./repos/backend:/app
+      - /app/node_modules
+    networks:
+      - default
+    ports:
+      - "3001:3001"
+    env_file:
+      - .env.local
+
+  timescale:
+    image: timescale/timescaledb:latest-pg18
+    restart: on-failure
+    volumes:
+      - ./data/timescale:/pgdata
+    environment:
+      - PGDATA=/pgdata
+    env_file:
+      - .env.local
+    networks:
+      - default
+
+networks:
+  default:
+    driver: bridge

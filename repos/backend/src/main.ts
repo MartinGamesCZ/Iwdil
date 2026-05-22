@@ -1,8 +1,11 @@
 import { NestFactory, Reflector } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { AuthGuard } from './guards/auth.guard';
+import { Database } from './database/database';
 
 async function bootstrap() {
+  await Database.initialize();
+
   const app = await NestFactory.create(AppModule);
 
   app.enableCors('*');
@@ -12,4 +15,5 @@ async function bootstrap() {
 
   await app.listen(process.env.PORT ?? 3001);
 }
-bootstrap();
+
+void bootstrap();
