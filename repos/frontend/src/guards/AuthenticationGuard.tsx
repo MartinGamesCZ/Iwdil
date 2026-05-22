@@ -1,7 +1,7 @@
 import { ErrorScreen } from "@/components/screens/ErrorScreen";
 import { logtoConfig } from "@/config/logto";
 import { AuthenticationProvider } from "@/context/AuthenticationContext";
-import { getLogtoContext } from "@logto/next/server-actions";
+import { getAccessTokenRSC, getLogtoContext } from "@logto/next/server-actions";
 import { redirect } from "next/navigation";
 import { ReactNode } from "react";
 
@@ -21,8 +21,16 @@ export async function AuthenticationGuard(props: IAuthenticationGuardProps) {
       />
     );
 
+  const apiAccessToken = await getAccessTokenRSC(
+    logtoConfig,
+    process.env.LOGTO_API_RESOURCE || "http://localhost:3001",
+  );
+
   return (
-    <AuthenticationProvider claims={claims}>
+    <AuthenticationProvider
+      claims={JSON.parse(JSON.stringify(claims))}
+      apiAccessToken={apiAccessToken}
+    >
       {props.children}
     </AuthenticationProvider>
   );

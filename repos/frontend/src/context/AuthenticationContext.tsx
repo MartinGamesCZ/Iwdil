@@ -5,16 +5,20 @@ import { IdTokenClaims } from "@logto/next";
 import { createContext, ReactNode, useContext } from "react";
 
 export const AuthenticationContext = createContext<AuthenticationManager>(
-  new AuthenticationManager(undefined),
+  new AuthenticationManager(undefined, undefined),
 );
 
 interface IAuthenticationProviderProps {
   children: ReactNode | ReactNode[];
   claims: IdTokenClaims;
+  apiAccessToken: string;
 }
 
 export function AuthenticationProvider(props: IAuthenticationProviderProps) {
-  const authManager = new AuthenticationManager(props.claims);
+  const authManager = new AuthenticationManager(
+    props.claims,
+    props.apiAccessToken,
+  );
 
   return (
     <AuthenticationContext.Provider value={authManager}>

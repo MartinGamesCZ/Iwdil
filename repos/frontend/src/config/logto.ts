@@ -7,4 +7,8 @@ export const logtoConfig: LogtoNextConfig = {
   baseUrl: process.env.APP_URL || "http://localhost:3000",
   cookieSecret: process.env.LOGTO_COOKIE_SECRET || "",
   cookieSecure: process.env.NODE_ENV === "production",
+  resources: process.env.LOGTO_API_RESOURCE
+    ? [process.env.LOGTO_API_RESOURCE]
+    : ["http://localhost:3001"],
+  scopes: ["openid", "profile", "offline", "api:access", "api:admin"],
 };
