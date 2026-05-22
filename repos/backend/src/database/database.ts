@@ -1,8 +1,10 @@
 import { DataSource, EntityTarget, ObjectLiteral, Repository } from 'typeorm';
 import { InternalServerErrorException } from '@nestjs/common';
+import { UserEntity } from './entities/UserEntity';
+import { AuditEntryEntity } from './entities/AuditEntryEntity';
 
 export class Database {
-  static #ENTITIES: ObjectLiteral = [];
+  static #ENTITIES: ObjectLiteral = [UserEntity, AuditEntryEntity];
 
   static #datasource = new DataSource({
     type: 'postgres',
