@@ -1,4 +1,20 @@
 services:
+  traefik:
+    image: traefik
+    command:
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=true"
+      - "--entrypoints.websecure.address=:443"
+      - "--providers.file.filename=/certs/dynamic_conf.yml"
+      - "--accesslog=true"
+    ports:
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./certs:/certs:ro
+    networks:
+      - default
+
   frontend:
     tty: true
     restart: on-failure
@@ -43,6 +59,48 @@ services:
       - .env.local
     networks:
       - default
+
+  oauth2:
+    image: quay.io/oauth2-proxy/oauth2-proxy:v7.8.1
+    restart: on-failure
+    env_file:
+      - .env.local
+    networks:
+      - default
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.oauth2.rule=Host(`localhost`) && PathPrefix(`/oauth2`)"
+      - "traefik.http.routers.oauth2.entrypoints=websecure"
+      - "traefik.http.routers.oauth2.tls=true"
+      - "traefik.http.services.oauth2.loadbalancer.server.port=4180"
+      - "traefik.http.middlewares.oauth2.forwardauth.address=http://oauth2:4180/"
+      - "traefik.http.middlewares.oauth2.forwardauth.trustForwardHeader=true"
+      - "traefik.http.middlewares.oauth2.forwardauth.authResponseHeaders=X-Auth-Request-User,X-Auth-Request-Email,Set-Cookie"
+
+  minio:
+    image: firstfinger/minio:latest
+    restart: on-failure
+    volumes:
+      - ./data/minio:/data
+    env_file:
+      - .env.local
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+      - "9002:9002"
+    networks:
+      - default
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.minio.rule=Host(`localhost`) && PathPrefix(`/service/minio`)"
+      - "traefik.http.routers.minio.entrypoints=websecure"
+      - "traefik.http.routers.minio.tls=true"
+      - "traefik.http.services.minio.loadbalancer.server.port=9001"
+      - "traefik.http.routers.minio.middlewares=minio-redirect@docker,oauth2@docker,minio-strip@docker"
+      - "traefik.http.middlewares.minio-strip.stripprefix.prefixes=/service/minio"
+      - "traefik.http.middlewares.minio-strip.stripprefix.forceSlash=true"
+      - "traefik.http.middlewares.minio-redirect.redirectregex.regex=^(https?://[^/]+)/service/minio$$"
+      - "traefik.http.middlewares.minio-redirect.redirectregex.replacement=$${1}/service/minio/"
 
 networks:
   default:
