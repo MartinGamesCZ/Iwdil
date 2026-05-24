@@ -3,3 +3,5 @@
 !.env.example
 experimentation/
 data/
+certs/
+.swc/
