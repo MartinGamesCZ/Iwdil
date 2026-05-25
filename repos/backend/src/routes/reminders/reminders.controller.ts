@@ -21,4 +21,12 @@ export class RemindersController {
   async getQuickCreateSnippetUrl(@AuthInfo() authInfo: IAuthInfo) {
     return this.remindersService.quickCreateGetSnippetUrl(authInfo.sub);
   }
+
+  @Post('/quick-create')
+  async quickCreate(
+    @AuthInfo() authInfo: IAuthInfo,
+    @Body('when') when: string,
+  ) {
+    return this.remindersService.quickCreate(authInfo.sub, when);
+  }
 }

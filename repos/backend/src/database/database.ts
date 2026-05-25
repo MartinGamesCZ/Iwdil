@@ -2,9 +2,14 @@ import { DataSource, EntityTarget, ObjectLiteral, Repository } from 'typeorm';
 import { InternalServerErrorException } from '@nestjs/common';
 import { UserEntity } from './entities/UserEntity';
 import { AuditEntryEntity } from './entities/AuditEntryEntity';
+import { QuickReminderEntity } from './entities/QuickReminderEntity';
 
 export class Database {
-  static #ENTITIES: ObjectLiteral = [UserEntity, AuditEntryEntity];
+  static #ENTITIES: ObjectLiteral = [
+    UserEntity,
+    AuditEntryEntity,
+    QuickReminderEntity,
+  ];
 
   static #datasource = new DataSource({
     type: 'postgres',
@@ -14,7 +19,7 @@ export class Database {
     password: process.env.POSTGRES_PASSWORD,
     database: process.env.POSTGRES_DB,
     entities: this.#ENTITIES,
-    logging: true,
+    logging: false,
     synchronize: true,
   });
 

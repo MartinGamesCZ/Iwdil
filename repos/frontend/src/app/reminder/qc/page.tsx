@@ -29,7 +29,7 @@ export default function Page() {
           when: string;
         },
         {}
-      >(authManager, "/reminders/quick-create/snippet/url", {
+      >(authManager, "/reminders/quick-create", {
         when: options.arg.get("when") as string,
       });
 

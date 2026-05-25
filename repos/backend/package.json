@@ -25,12 +25,17 @@
     "@nestjs/common": "^11.0.1",
     "@nestjs/core": "^11.0.1",
     "@nestjs/platform-express": "^11.0.1",
+    "@nestjs/schedule": "^6.1.3",
     "@swc/cli": "^0.8.1",
     "@swc/core": "^1.15.33",
+    "axios": "^1.16.1",
     "jose": "^6.2.3",
+    "ollama": "^0.6.3",
     "pg": "^8.21.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
+    "sharp": "^0.34.5",
+    "tesseract.js": "^7.0.0",
     "typeorm": "^1.0.0"
   },
   "devDependencies": {
@@ -78,6 +83,8 @@
   "trustedDependencies": [
     "@nestjs/core",
     "@swc/core",
+    "sharp",
+    "tesseract.js",
     "unrs-resolver"
   ]
 }

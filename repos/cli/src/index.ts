@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
 
+import { DaemonCommand } from "./commands/daemon";
 import { LoginCommand } from "./commands/login";
 import { QuickCreateCommand } from "./commands/qc";
 
@@ -12,6 +13,10 @@ switch (subcommand) {
 
   case "login":
     await LoginCommand.run();
+    break;
+
+  case "daemon":
+    await DaemonCommand.run();
     break;
 
   default:
