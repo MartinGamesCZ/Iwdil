@@ -22,6 +22,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1053.0",
     "@aws-sdk/s3-request-presigner": "^3.1053.0",
+    "@nestjs/bullmq": "^11.0.4",
     "@nestjs/common": "^11.0.1",
     "@nestjs/core": "^11.0.1",
     "@nestjs/platform-express": "^11.0.1",
@@ -29,6 +30,7 @@
     "@swc/cli": "^0.8.1",
     "@swc/core": "^1.15.33",
     "axios": "^1.16.1",
+    "bullmq": "^5.77.2",
     "jose": "^6.2.3",
     "ollama": "^0.6.3",
     "pg": "^8.21.0",
@@ -83,6 +85,7 @@
   "trustedDependencies": [
     "@nestjs/core",
     "@swc/core",
+    "msgpackr-extract",
     "sharp",
     "tesseract.js",
     "unrs-resolver"

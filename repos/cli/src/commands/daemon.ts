@@ -23,7 +23,16 @@ export class DaemonCommand {
 
       notify({
         title: "Set reminder",
-        message: `${data.text}\n- at ${new Date(data.when)}`,
+        message: `${data.text}\n- at ${data.when}`,
+      });
+    });
+
+    es.addEventListener("qr:due", (msg: { data: string }) => {
+      const data = JSON.parse(msg.data);
+
+      notify({
+        title: "Reminder due",
+        message: data.inferedText,
       });
     });
   }

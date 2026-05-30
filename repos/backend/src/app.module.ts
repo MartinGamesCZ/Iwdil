@@ -5,9 +5,21 @@ import { RemindersModule } from './routes/reminders/reminders.module';
 import { OcrService } from './services/ocr.service';
 import { ScheduleModule } from '@nestjs/schedule';
 import { NotificationsModule } from './routes/notifications/notifications.module';
+import { BullModule } from '@nestjs/bullmq';
 
 @Module({
-  imports: [RemindersModule, NotificationsModule, ScheduleModule.forRoot()],
+  imports: [
+    RemindersModule,
+    NotificationsModule,
+    ScheduleModule.forRoot(),
+    BullModule.forRoot({
+      connection: {
+        host: 'redis',
+        port: 6379,
+        password: process.env.REDIS_PASSWORD,
+      },
+    }),
+  ],
   controllers: [],
   providers: [UserService, AuditService, OcrService],
 })

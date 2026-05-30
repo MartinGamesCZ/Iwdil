@@ -21,6 +21,11 @@ import { UserEntity } from 'src/database/entities/UserEntity';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { ReminderStatus } from 'src/types/reminder';
 import { NotificationsService } from '../notifications/notifications.service';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
+import { ReminderDataExtractionPrompt } from 'src/prompts/reminder-data-extraction';
+import { LessThan } from 'typeorm';
+import { Message } from 'ollama';
 
 @Injectable()
 export class RemindersService {
@@ -28,12 +33,12 @@ export class RemindersService {
   private s3ClientExternal: S3Client;
   private bucketName = 'iwdil';
 
-  #qrQueueProcessing = false;
-
   constructor(
     private readonly ocrService: OcrService,
     private readonly llmService: LlmService,
     private readonly notificationsService: NotificationsService,
+    @InjectQueue('quick-reminders')
+    private readonly qrQueue: Queue,
   ) {
     const credentials = {
       accessKeyId: process.env.MINIO_ACCESS_KEY!,
@@ -60,9 +65,8 @@ export class RemindersService {
     size: string,
   ): Promise<{ url: string }> {
     const fsize = Number(size);
-    if (!Number.isInteger(fsize) || fsize < 1 || fsize > 10485760) {
+    if (!Number.isInteger(fsize) || fsize < 1 || fsize > 10485760)
       throw new BadRequestException('Invalid file size');
-    }
 
     const key = `uploads/${userId}/snippet.png`;
     const command = new PutObjectCommand({
@@ -160,80 +164,106 @@ export class RemindersService {
 
     await Database.get<QuickReminderEntity>().save(qrEntity);
 
+    await this.qrQueue.add('process-reminder', { reminderId: qrEntity.id });
+
     return {};
   }
-
-  @Cron(CronExpression.EVERY_SECOND)
-  private async qrQueueProcessor() {
-    // Lock
-    if (this.#qrQueueProcessing) return;
-    this.#qrQueueProcessing = true;
-
-    try {
-      this.#processNextQr();
-    } catch (e) {}
-
-    this.#qrQueueProcessing = false;
-  }
-
-  async #processNextQr() {
-    const nextUnprocessed = await Database.get<QuickReminderEntity>().findOne({
+  async quickProcess(reminderId: string) {
+    const qr = await Database.get<QuickReminderEntity>().findOne({
       where: {
-        status: ReminderStatus.ScheduledForProcessing,
+        id: reminderId,
       },
       relations: {
         user: true,
       },
     });
-    if (!nextUnprocessed) return;
+    if (!qr) return;
 
-    console.log(`Processing quick reminder ${nextUnprocessed.id}`);
+    console.log(`Processing quick reminder ${qr.id}`);
 
-    nextUnprocessed.status = ReminderStatus.Processing;
-    await Database.get<QuickReminderEntity>().save(nextUnprocessed);
+    qr.status = ReminderStatus.Processing;
+    await Database.get<QuickReminderEntity>().save(qr);
 
-    const res = await this.llmService.ask(
-      `You are a profesional reminder creator. You will receive text extracted from a user uploaded image with a reminder (screenshot of what they need to do) and "when", which is when they want to get reminded. Your task is to return a correctly structured json.
-      I have also given you current datetime, so you can work with values like "10:20" (I ALWAYS USE 24H format) and "in 40 minutes".
-      If I give you just the text (10:32 for example), assume it's the closest time after current time (if it's currently < 10:32 then it's 10:32 today and if it's currently > 10:32 then it's 10:32 tomorrow).
-      If you get for example "in one hour", "in one day", "in one week", etc. return the current datetime PLUS the hour/day/week in ISO string format.
-      
-      [BEGIN TEXT]
-      ${nextUnprocessed.extractedText}
-      [END TEXT]
-      
-      [BEGIN WHEN]
-      ${nextUnprocessed.userGivenWhen}
-      [END WHEN]
-
-      [BEGIN CURRENT DATETIME -- DO NOT RETURN THIS, USE FOR REFERENCE]
-      ${new Date().toISOString()}
-      [END CURRENT DATETIME]
-      
-      Json format:
+    let infered: {
+      text: string;
+      datetime: string;
+    } | null = null;
+    let messages: Message[] = [
       {
-        "datetime": "ISO STRING",
-        "text": "Do something"
-      }
-        
-      Keep the reminder text meaningful and short, don't just copy whatever you've got.`,
-    );
+        role: 'user',
+        content: ReminderDataExtractionPrompt(
+          qr.extractedText,
+          qr.userGivenWhen,
+        ),
+      },
+    ];
 
-    const infered = JSON.parse(res.content);
+    for (let tries = 0; tries < 3; tries++) {
+      console.log('Infer try ' + (tries + 1));
 
-    nextUnprocessed.inferedText = infered.text;
-    nextUnprocessed.inferedWhen = infered.datetime;
-    nextUnprocessed.status = ReminderStatus.Scheduled;
-    await Database.get<QuickReminderEntity>().save(nextUnprocessed);
+      const res = await this.llmService.chat(messages, { temperature: 0.1 });
+
+      infered = JSON.parse(
+        this.llmService.stripOutJson(res.output.message.content),
+      );
+
+      messages.push(res.output.message);
+
+      if (
+        new Date(infered!.datetime).getTime() >
+        new Date(
+          new Date().toLocaleString('sv-SE', { timeZone: 'Europe/Prague' }),
+        ).getTime()
+      )
+        break;
+
+      messages.push({
+        role: 'user',
+        content: "INVALID DATETIME, ISN'T IT IN THE PAST?",
+      });
+    }
+
+    qr.inferedText = infered!.text;
+    qr.inferedWhen = infered!.datetime;
+    qr.status = ReminderStatus.Scheduled;
+    await Database.get<QuickReminderEntity>().save(qr);
 
     // Notify all clients
-    this.notificationsService.push(nextUnprocessed.user.id, {
+    this.notificationsService.push(qr.user.id, {
       type: 'qr:create',
       data: {
-        id: nextUnprocessed.id,
-        text: nextUnprocessed.inferedText,
-        when: nextUnprocessed.inferedWhen,
+        id: qr.id,
+        text: qr.inferedText,
+        when: qr.inferedWhen,
       },
     });
+
+    console.log(`Done processing ${qr.id}`);
+  }
+
+  @Cron(CronExpression.EVERY_10_SECONDS)
+  async checkDue() {
+    // Get all due
+    const reminders = await Database.get<QuickReminderEntity>().find({
+      where: {
+        status: ReminderStatus.Scheduled,
+        inferedWhen: LessThan(
+          new Date().toLocaleString('sv-SE', { timeZone: 'Europe/Prague' }),
+        ),
+      },
+      relations: {
+        user: true,
+      },
+    });
+
+    for (const reminder of reminders) {
+      await this.notificationsService.push(reminder.user.id, {
+        type: 'qr:due',
+        data: reminder,
+      });
+
+      reminder.status = ReminderStatus.Completed;
+      await Database.get<QuickReminderEntity>().save(reminder);
+    }
   }
 }

@@ -4,10 +4,22 @@ import { RemindersService } from './reminders.service';
 import { OcrService } from 'src/services/ocr.service';
 import { LlmService } from 'src/services/llm.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { BullModule } from '@nestjs/bullmq';
+import { RemindersProcessor } from './reminders.processor';
 
 @Module({
-  imports: [],
+  imports: [
+    BullModule.registerQueue({
+      name: 'quick-reminders',
+    }),
+  ],
   controllers: [RemindersController],
-  providers: [RemindersService, OcrService, LlmService, NotificationsService],
+  providers: [
+    RemindersService,
+    RemindersProcessor,
+    OcrService,
+    LlmService,
+    NotificationsService,
+  ],
 })
 export class RemindersModule {}

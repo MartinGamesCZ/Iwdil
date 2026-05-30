@@ -51,7 +51,7 @@ export class QuickReminderEntity {
     type: 'timestamptz',
     nullable: true,
   })
-  inferedWhen: Date | null;
+  inferedWhen: string | null;
 
   @CreateDateColumn()
   createdAt: Date;

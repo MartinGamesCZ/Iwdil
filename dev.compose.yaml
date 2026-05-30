@@ -85,7 +85,7 @@ services:
     env_file:
       - .env.local
     ports:
-      - "9000:9000"
+      - "9100:9000"
       - "9001:9001"
       - "9002:9002"
     networks:
@@ -101,6 +101,16 @@ services:
       - "traefik.http.middlewares.minio-strip.stripprefix.forceSlash=true"
       - "traefik.http.middlewares.minio-redirect.redirectregex.regex=^(https?://[^/]+)/service/minio$$"
       - "traefik.http.middlewares.minio-redirect.redirectregex.replacement=$${1}/service/minio/"
+
+  redis:
+    image: redis:latest
+    restart: on-failure
+    env_file:
+      - .env.local
+    volumes:
+      - ./data/redis:/data
+    networks:
+      - default
 
 networks:
   default:

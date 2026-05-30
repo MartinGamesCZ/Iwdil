@@ -34,6 +34,8 @@ export class QuickCreateCommand {
       return;
     }
 
+    console.log(response.url);
+
     const { url } = response;
 
     await axios.put(url, buffer, {
