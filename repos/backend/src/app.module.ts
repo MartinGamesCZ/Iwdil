@@ -6,11 +6,13 @@ import { OcrService } from './services/ocr.service';
 import { ScheduleModule } from '@nestjs/schedule';
 import { NotificationsModule } from './routes/notifications/notifications.module';
 import { BullModule } from '@nestjs/bullmq';
+import { SearchModule } from './routes/search/search.module';
 
 @Module({
   imports: [
     RemindersModule,
     NotificationsModule,
+    SearchModule,
     ScheduleModule.forRoot(),
     BullModule.forRoot({
       connection: {

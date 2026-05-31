@@ -1,5 +1,6 @@
 import axios, { AxiosRequestConfig } from "axios";
 import { AuthenticationManager } from "./AuthenticationManager";
+import { EventSource } from "eventsource";
 
 interface IErrorResponse {
   error: string;
@@ -141,6 +142,22 @@ export class API {
         ...params?.headers,
         Authorization: `Bearer ${authManager.apiAccessToken}`,
       },
+    });
+  }
+
+  static rbacSse(
+    authManager: AuthenticationManager,
+    endpoint: string,
+  ): EventSource {
+    return new EventSource(`${this.#connector.defaults.baseURL}${endpoint}`, {
+      fetch: (url, init: any) =>
+        fetch(url, {
+          ...init,
+          headers: {
+            ...init.headers,
+            Authorization: `Bearer ${authManager.apiAccessToken}`,
+          },
+        }),
     });
   }
 }

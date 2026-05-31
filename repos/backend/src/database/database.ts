@@ -3,12 +3,18 @@ import { InternalServerErrorException } from '@nestjs/common';
 import { UserEntity } from './entities/UserEntity';
 import { AuditEntryEntity } from './entities/AuditEntryEntity';
 import { QuickReminderEntity } from './entities/QuickReminderEntity';
+import { SearchSessionEntity } from './entities/SearchSessionEntity';
+import { SearchMessageEntity } from './entities/SearchMessageEntity';
+import { SearchDocumentEntity } from './entities/SearchDocumentEntity';
 
 export class Database {
   static #ENTITIES: ObjectLiteral = [
     UserEntity,
     AuditEntryEntity,
     QuickReminderEntity,
+    SearchSessionEntity,
+    SearchMessageEntity,
+    SearchDocumentEntity,
   ];
 
   static #datasource = new DataSource({
